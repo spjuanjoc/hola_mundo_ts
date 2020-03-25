@@ -53,11 +53,20 @@ $ npm install @types/node --save-dev
 
 ---
 ## Compile
+### From command line
+```
+$ cd source
+$ tsc
+$ cd ..
+$ tsc --watch
+```
+
+### From tool window
 1. Open source/index.ts file
 2. In the bottom toolbar shoud appear "TypeScript 3.x.x" window
 3. In TypeScript window click the hammer>Compile All
 
-Or
+### From Project window 
 1. Right click tsconfig.json file
 2. Click "Compile Typescript"
 ---
