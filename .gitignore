@@ -1,0 +1,13 @@
+# Created by .ignore support plugin (hsz.mobi)
+node_modules
+coverage
+
+# IntelliJ/WebStorm
+/.idea
+
+# JS
+*.js
+*.js.map
+
+# dist
+/dist
