@@ -4,7 +4,8 @@
   "description": "This is a hello world for typescript ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "patch-package"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,8 @@
   "directories": {
     "test": "tests"
   },
-  "dependencies": {}
+  "dependencies": {
+    "cmake-js": "^6.2.1",
+    "patch-package": "^6.4.7"
+  }
 }

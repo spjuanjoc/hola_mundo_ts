@@ -1,0 +1,107 @@
+diff --git a/node_modules/cmake-js/lib/buildSystem.js b/node_modules/cmake-js/lib/buildSystem.js
+index 819a2c9..0845a84 100644
+--- a/node_modules/cmake-js/lib/buildSystem.js
++++ b/node_modules/cmake-js/lib/buildSystem.js
+@@ -3,6 +3,7 @@ let CMake = require("./cMake");
+ let Dist = require("./dist");
+ let CMLog = require("./cmLog");
+ let appCMakeJSConfig = require("./appCMakeJSConfig");
++let npmConfig = require("./npmConfig");
+ let path = require("path");
+ let _ = require("lodash");
+ let Toolset = require("./toolset");
+@@ -12,6 +13,11 @@ function BuildSystem(options) {
+     this.options.directory = path.resolve(this.options.directory || process.cwd());
+     this.log = new CMLog(this.options);
+     let appConfig = appCMakeJSConfig(this.options.directory, this.log);
++    let npmOptions = npmConfig(this.log);
++
++    if (_.isPlainObject(npmOptions) && _.keys(npmOptions).length) {
++        this.options.runtimeDirectory = npmOptions["nodedir"];
++    }
+     if (_.isPlainObject(appConfig)) {
+         if (_.keys(appConfig).length) {
+             this.log.verbose("CFG", "Applying CMake.js config from root package.json:");
+@@ -41,6 +47,11 @@ BuildSystem.prototype._ensureInstalled = async function () {
+ };
+ 
+ BuildSystem.prototype._showError = function (e) {
++    if (this.log === undefined) {
++        // handle internal errors (init failed)
++        console.error("OMG", e.stack);
++        return;
++    }
+     if (this.log.level === "verbose" || this.log.level === "silly") {
+         this.log.error("OMG", e.stack);
+     }
+diff --git a/node_modules/cmake-js/lib/dist.js b/node_modules/cmake-js/lib/dist.js
+index 0867fad..a2c0821 100644
+--- a/node_modules/cmake-js/lib/dist.js
++++ b/node_modules/cmake-js/lib/dist.js
+@@ -30,11 +30,15 @@ function Dist(options) {
+ Object.defineProperties(Dist.prototype, {
+     internalPath: {
+         get: function () {
+-            return path.join(
+-                environment.home,
+-                ".cmake-js",
+-                (this.targetOptions.runtime) + "-" + this.targetOptions.arch,
+-                "v" + this.targetOptions.runtimeVersion);
++            let cacheDirectory =  ".cmake-js";
++            let runtimeArchDirectory = (this.targetOptions.runtime) + "-" + this.targetOptions.arch;
++            let runtimeVersionDirectory = "v" + this.targetOptions.runtimeVersion;
++
++            return this.options.runtimeDirectory ||
++                path.join(environment.home,
++                    cacheDirectory,
++                    runtimeArchDirectory,
++                    runtimeVersionDirectory);
+         }
+     },
+     externalPath: {
+@@ -107,7 +111,7 @@ Dist.prototype.ensureDownloaded = async function () {
+ 
+ Dist.prototype.download = async function () {
+     let log = this.log;
+-    log.info("DIST", "Downloading distribution files.");
++    log.info("DIST", "Downloading distribution files to: " + this.internalPath);
+     await fs.ensureDir(this.internalPath);
+     let sums = await this._downloadShaSums();
+     await Promise.all([this._downloadLibs(sums), this._downloadTar(sums)]);
+diff --git a/node_modules/cmake-js/lib/npmConfig.js b/node_modules/cmake-js/lib/npmConfig.js
+new file mode 100644
+index 0000000..570197c
+--- /dev/null
++++ b/node_modules/cmake-js/lib/npmConfig.js
+@@ -0,0 +1,31 @@
++"use strict";
++
++function getNpmConfig() {
++    let npmOptions = {};
++    let npmConfigPrefix = 'npm_config_'
++    Object.keys(process.env).forEach(function (name) {
++        if (name.indexOf(npmConfigPrefix) !== 0) {
++            return
++        }
++        let value = process.env[name]
++        name = name.substring(npmConfigPrefix.length)
++        if (name) {
++            npmOptions[name] = value
++        }
++    }, this)
++
++    return npmOptions;
++}
++
++module.exports = function (log) {
++    log.verbose("CFG", "Looking for NPM config.");
++    let options = getNpmConfig();
++
++    if (options) {
++        log.silly("CFG", "NPM options:", options);
++    }else {
++        log.verbose("CFG", "There are no NPM options available.");
++    }
++
++    return options;
++};
